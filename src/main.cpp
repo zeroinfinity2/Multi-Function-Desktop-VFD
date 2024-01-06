@@ -10,6 +10,10 @@
 U8G2_GP1294AI_256X48_1_4W_SW_SPI Display(U8G2_R0, 13, 12, 10, U8X8_PIN_NONE, 8);
 
 void setup(void) {
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(8, OUTPUT);
   Display.begin(); // Init the display
 }
 
