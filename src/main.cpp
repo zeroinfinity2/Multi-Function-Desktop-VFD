@@ -14,6 +14,7 @@ void setup(void) {
 }
 
 // draw something on the display with the `firstPage()`/`nextPage()` loop
+
 void loop(void) {
   Display.firstPage();
   do {
