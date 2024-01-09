@@ -15,15 +15,21 @@ void setup(void) {
   pinMode(10, OUTPUT);
   pinMode(8, OUTPUT);
   Display.begin(); // Init the display
+  Display.setContrast(150); // x = 0(low) to 255
 }
 
 // draw something on the display with the `firstPage()`/`nextPage()` loop
+int test = 0;
 
 void loop(void) {
   Display.firstPage();
   do {
-    Display.setFont(u8g2_font_ncenB14_tr);
-    Display.drawStr(0,20,"Hello World!");
+    Display.setFont(u8g2_font_luBS12_te);
+    Display.drawStr(0,20,"This is a test message");
+    Display.setCursor(20, 40);
+    Display.print(test);
+
   } while (Display.nextPage() );
   delay(1000);
+  test = (test + 1) % 100;
 }
