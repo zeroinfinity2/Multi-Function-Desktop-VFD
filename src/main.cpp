@@ -65,8 +65,8 @@ void loop() {
   if ((runTime - lastBufferTime) > updateBuffer) {
     Display.clearBuffer();
 
-    // Draw a 256 x 28 Frame in the display
-    Display.drawFrame(0, 0, 256, 48);
+    // Draw a 255 x 28 Frame in the display
+    Display.drawFrame(0, 0, 255, 48);
 
     Display.setFont( u8g2_font_5x7_mf);
     Display.drawStr(10,20,"Test");
@@ -97,7 +97,6 @@ void loop() {
     // end 12 Hour clock
 
     // Print Time to the display.
-
     Display.setFont(u8g2_font_roentgen_nbp_t_all);
     Display.setCursor(155, 10);
     print2digits(dispHour);
