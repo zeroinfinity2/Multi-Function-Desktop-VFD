@@ -2,13 +2,8 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <U8g2lib.h>
-#include <TimeLib.h>
-#include <DS1307RTC.h>
+#include <RTClib.h>
 
-const char *monthName[12] = {
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
 int lightLevel;
 long runTime;
 
@@ -21,23 +16,19 @@ const long updateBrightness = 5000;
 long lastBrightnessTime = 0;
 
 // RTC Stuff
-tmElements_t tm;
-bool parse = false;
-bool config = false;
+RTC_DS1307 rtc;
 int dispHour = 0;
 String timeDay;
 
 // Function Prototypes
-bool getTime(const char *str);
-bool getDate(const char *str);
 int getBrightness();
 void print2digits(int number);
 
 
 
 /* Display Constructor 
-  Pins are unique to setup.
-  Constructor Setup: rotation, clock, data, CS, DC, reset
+Pins are unique to setup.
+Constructor Setup: rotation, clock, data, CS, DC, reset
 */
 U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, 8, 10, 9, U8X8_PIN_NONE, 11);
 
@@ -48,33 +39,21 @@ void setup() {
   pinMode(11, OUTPUT);
   pinMode(A0, INPUT_PULLUP);
 
+  Serial.begin(9600);
   Display.begin(); // Init the display
   Display.setContrast(5); // x = 0(low) to 255, initialize brightness
 
-  // get the date and time the compiler was run
-  if (getDate(__DATE__) && getTime(__TIME__)) {
-      parse = true;
-    // and configure the RTC with this info
-    if (RTC.write(tm)) {
-      config = true;
-    }
+  // Find the RTC Module
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
   }
 
-  Serial.begin(9600);
-   if (parse && config) {
-    Serial.print("DS1307 configured Time=");
-    Serial.print(__TIME__);
-    Serial.print(", Date=");
-    Serial.println(__DATE__);
-  } else if (parse) {
-    Serial.println("DS1307 Communication Error :-{");
-    Serial.println("Please check your circuitry");
-  } else {
-    Serial.print("Could not parse info from the compiler, Time=\"");
-    Serial.print(__TIME__);
-    Serial.print("\", Date=\"");
-    Serial.print(__DATE__);
-    Serial.println("\"");
+  if (! rtc.isrunning()) {
+    Serial.println("RTC is NOT running, let's set the time!");
+    // When time needs to be set on a new device, or after a power loss, the
+    // following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 }
 
@@ -109,44 +88,32 @@ void loop() {
     Display.print("%");
 
     // Date / Time Display
-    if(RTC.read(tm)) {
-      dispHour = tm.Hour;
-      
-      // 12 Hour Clock. Comment out for 24 hour clock.
-      dispHour = ((tm.Hour % 12) == 0) ? 12 : tm.Hour % 12;
-      timeDay = ((tm.Hour < 12) && (tm.Hour >= 0)) ? "AM" : "PM";
-      // end 12 Hour clock
+    DateTime now = rtc.now();
+    dispHour = now.hour();
 
-      // Print Time to the display.
-      Display.setFont(u8g2_font_roentgen_nbp_t_all);
-      Display.setCursor(155, 10);
-      print2digits(dispHour);
-      Display.print(":");
-      print2digits(tm.Minute);
-      Display.print(":");
-      print2digits(tm.Second);
-      Display.print(timeDay);
+    // 12 Hour Clock. Comment out for 24 hour clock.
+    dispHour = ((now.hour() % 12) == 0) ? 12 : now.hour() % 12;
+    timeDay = ((now.isPM() == 1)) ? "PM" : "AM";
+    // end 12 Hour clock
 
-      // Print Date to the display
-      Display.setCursor(155, 20);
-      print2digits(tm.Month);
-      Display.print("/");
-      print2digits(tm.Day);
-      Display.print("/");
-      Display.print(tmYearToCalendar(tm.Year));
+    // Print Time to the display.
 
-    } 
+    Display.setFont(u8g2_font_roentgen_nbp_t_all);
+    Display.setCursor(155, 10);
+    print2digits(dispHour);
+    Display.print(":");
+    print2digits(now.minute());
+    Display.print(":");
+    print2digits(now.second());
+    Display.print(timeDay);
 
-    else { // Something's wrong with the RTC
-      if (RTC.chipPresent()) {
-        Serial.println("The DS1307 is stopped.");
-        Serial.println();
-        } 
-      else {
-      Serial.println("DS1307 read error!  Please check the circuitry.");
-      Serial.println();
-      }
-    }
+    // Print Date to the display
+    Display.setCursor(155, 20);
+    print2digits(now.month());
+    Display.print("/");
+    print2digits(now.day());
+    Display.print("/");
+    Display.print(now.year());
 
     // Automatically adjust brightness by updateBrightness setting.
     if ((runTime - lastBrightnessTime) > updateBrightness) {
@@ -158,38 +125,8 @@ void loop() {
     // Set a new buffer updated time
     Display.sendBuffer();
     lastBufferTime = runTime;
+    }
   }
-}
-
-// Sets the time to the time manager.
-bool getTime(const char *str)
-{
-  int Hour, Min, Sec;
-
-  if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3) return false;
-  tm.Hour = Hour;
-  tm.Minute = Min;
-  tm.Second = Sec;
-  return true;
-}
-
-// Sets the date to the time manager.
-bool getDate(const char *str)
-{
-  char Month[12];
-  int Day, Year;
-  uint8_t monthIndex;
-
-  if (sscanf(str, "%s %d %d", Month, &Day, &Year) != 3) return false;
-  for (monthIndex = 0; monthIndex < 12; monthIndex++) {
-    if (strcmp(Month, monthName[monthIndex]) == 0) break;
-  }
-  if (monthIndex >= 12) return false;
-  tm.Day = Day;
-  tm.Month = monthIndex + 1;
-  tm.Year = CalendarYrToTm(Year);
-  return true;
-}
 
 // Get the light level from the photodiode and set a brightness from 0 - 255.
 int getBrightness() {
