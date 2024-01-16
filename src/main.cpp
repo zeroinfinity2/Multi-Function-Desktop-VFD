@@ -4,27 +4,25 @@
 #include <U8g2lib.h>
 #include <RTClib.h>
 
-int lightLevel;
-long runTime;
+uint16_t lightLevel;
+uint64_t runTime;
 
 // Buffer update
-const long updateBuffer = 1000;
-long lastBufferTime = 0;
+uint32_t const updateBuffer = 1000;
+uint64_t lastBufferTime = 0;
 
 // Brightness Adujustment
-const long updateBrightness = 5000;
-long lastBrightnessTime = 0;
+uint32_t const updateBrightness = 5000;
+uint64_t lastBrightnessTime = 0;
 
 // RTC Stuff
 RTC_DS1307 rtc;
-int dispHour = 0;
+uint8_t dispHour = 0;
 String timeDay;
 
 // Function Prototypes
-int getBrightness();
-void print2digits(int number);
-
-
+uint8_t getBrightness();
+void print2digits(uint8_t number);
 
 /* Display Constructor 
 Pins are unique to setup.
@@ -32,6 +30,8 @@ Constructor Setup: rotation, clock, data, CS, DC, reset
 */
 U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, 8, 10, 9, U8X8_PIN_NONE, 11);
 
+
+// ----------------------------------------------------------
 void setup() {
   pinMode(8, OUTPUT);
   pinMode(9, OUTPUT);
@@ -57,6 +57,7 @@ void setup() {
   }
 }
 
+// ----------------------------------------------------------
 void loop() {
   // Get the current running time
   runTime = millis();
@@ -65,7 +66,7 @@ void loop() {
   if ((runTime - lastBufferTime) > updateBuffer) {
     Display.clearBuffer();
 
-    // Draw a 255 x 28 Frame in the display
+    // Draw a 255 x 48 Frame in the display
     Display.drawFrame(0, 0, 255, 48);
 
     Display.setFont( u8g2_font_5x7_mf);
@@ -128,15 +129,15 @@ void loop() {
   }
 
 // Get the light level from the photodiode and set a brightness from 0 - 255.
-int getBrightness() {
+uint8_t getBrightness() {
   lightLevel = analogRead(0);
-  int brightness = static_cast<int>((lightLevel / 1023.0) * 255.0);
+  uint8_t brightness = static_cast<int>((lightLevel / 1023.0) * 255.0);
   brightness = constrain(brightness, 5, 204);
   return brightness;
 } 
 
 // Prefixes single digit date and time numbers with a zero.
-void print2digits(int number) {
+void print2digits(uint8_t number) {
   if (number >= 0 && number < 10) {
     Display.print("0");
     Display.print(number);
