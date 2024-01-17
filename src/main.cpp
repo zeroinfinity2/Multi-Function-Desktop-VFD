@@ -3,6 +3,15 @@
 #include <SPI.h>
 #include <U8g2lib.h>
 #include <RTClib.h>
+#include <arduinoFFT.h>
+
+// Arduino Pins
+#define CLK_PIN 8
+#define DATA_PIN 10
+#define CS_PIN 9
+#define RESET_PIN 11
+#define LIGHT_PIN A0
+
 
 uint16_t lightLevel;
 uint64_t runTime;
@@ -28,16 +37,16 @@ void print2digits(uint8_t number);
 Pins are unique to setup.
 Constructor Setup: rotation, clock, data, CS, DC, reset
 */
-U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, 8, 10, 9, U8X8_PIN_NONE, 11);
+U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, CLK_PIN, DATA_PIN, CS_PIN, U8X8_PIN_NONE, RESET_PIN);
 
 
 // ----------------------------------------------------------
 void setup() {
-  pinMode(8, OUTPUT);
-  pinMode(9, OUTPUT);
-  pinMode(10, OUTPUT);
-  pinMode(11, OUTPUT);
-  pinMode(A0, INPUT_PULLUP);
+  pinMode(CLK_PIN, OUTPUT);
+  pinMode(CS_PIN, OUTPUT);
+  pinMode(DATA_PIN, OUTPUT);
+  pinMode(RESET_PIN, OUTPUT);
+  pinMode(LIGHT_PIN, INPUT_PULLUP);
 
   Serial.begin(9600);
   Display.begin(); // Init the display
