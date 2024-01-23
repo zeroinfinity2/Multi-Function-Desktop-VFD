@@ -41,7 +41,7 @@ class RotEncoder {
       void setDirection();
 
       // Read the selector's state, return true or false
-      bool selectorPressed(uint8_t);
+      bool selectorPressed();
 
       // Records the state of the encoder
       void readEncoder();

@@ -43,8 +43,8 @@ void RotEncoder::getDtState(uint8_t dtPin) {
     _dtState = digitalRead(dtPin);
 }
 
-bool RotEncoder::selectorPressed(uint8_t switchPin) {
-    _selectorState = digitalRead(switchPin);
+bool RotEncoder::selectorPressed() {
+    _selectorState = digitalRead(_switchPin);
     if ((_selectorState == 0) && (millis() - _selectorPrevTime > _debounce)) {
         _selectorPrevTime = millis();
         return true;
