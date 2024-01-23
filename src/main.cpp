@@ -4,6 +4,7 @@
 #include <U8g2lib.h>
 #include <RTClib.h>
 #include <arduinoFFT.h>
+#include <rotary_enc.h>
 
 // Display Pins
 #define CLK_PIN 8
@@ -20,17 +21,18 @@
 enum Modes {
   CLOCK,
   MENU,
-  SET_ALARM
+  SET_ALARM,
+  ALARM
 };
 // Set the clock mode as the initial mode
 Modes mode = Modes::CLOCK;
-
 uint16_t lightLevel;
 uint64_t runTime;
 
 // Buffer update
 uint32_t const updateBuffer = 1000;
 uint64_t lastBufferTime = 0;
+uint32_t const menuTimeout = 8000;
 
 // Brightness Adujustment
 uint32_t const updateBrightness = 5000;
@@ -51,6 +53,7 @@ uint64_t lastButtonPress = 0;
 
 // Function Prototypes
 uint8_t getBrightness();
+void setBrightness();
 void print2digits(uint8_t number);
 void updateEncoder();
 void changeMode();
@@ -81,7 +84,7 @@ void setup() {
 
   lastStateCLK = digitalRead(ENC_CLK); // initial state of encoder
 
-  // Call updateEncoder when chenges are seen on the encoder pins
+  // Call updateEncoder when changes are seen on the encoder pins
   // 0, 1 are pins 2, 3 respectively.
   attachInterrupt(0, updateEncoder, CHANGE);
   attachInterrupt(1, updateEncoder, CHANGE);
@@ -108,7 +111,7 @@ void loop() {
   // Set the encoder state
   encButtonState = digitalRead(ENC_SW);
 
-  // Look for encoder button push, with 50ms debounce
+  // Look for encoder button push, with 500ms debounce
   //Then, change mode.
   if ((encButtonState == LOW) && (runTime - lastButtonPress > 500)) {
     Serial.println("Button Pressed");
@@ -159,11 +162,6 @@ void loop() {
 
         Display.drawBox(140, 40, width, 5);
 
-        //Display.setFont(u8g2_font_6x10_mf);
-        //Display.print("Light Sensor Brightness: ");
-        //Display.print((getBrightness() / 255.0) * 100.0);
-        //Display.print("%");
-
         // Print Date to the display
         Display.setFont(u8g2_font_spleen8x16_mf);
         Display.setCursor(35, 46);
@@ -173,13 +171,6 @@ void loop() {
         Display.print("/");
         Display.print(now.year());
 
-        // Automatically adjust brightness by updateBrightness setting.
-        if ((runTime - lastBrightnessTime) > updateBrightness) {
-          brightnessLevel = getBrightness();
-          Display.setContrast(brightnessLevel);  
-          lastBrightnessTime = runTime;
-        }
-        // Final thing to do
         // Set a new buffer updated time
         Display.sendBuffer();
         lastBufferTime = runTime;
@@ -189,19 +180,14 @@ void loop() {
     
     case Modes::MENU:
       // ------------------------ MENU MODE -------------------
-      // Menu mode's buffer time is 1000ms.
+      // Menu mode uses default buffer time
       if ((runTime - lastBufferTime) > updateBuffer) {
         Display.clearBuffer();
         Display.setFont(u8g2_font_roentgen_nbp_t_all);
         Display.setCursor(100, 40);
         Display.print("Menu Mode");
 
-        // Automatically adjust brightness by updateBrightness setting.
-        if ((runTime - lastBrightnessTime) > updateBrightness) {
-          brightnessLevel = getBrightness();
-          Display.setContrast(brightnessLevel);  
-          lastBrightnessTime = runTime;
-        }
+        
         
         // Set a new buffer updated time
         Display.sendBuffer();
@@ -209,7 +195,7 @@ void loop() {
       }
       
       // In menu, if there hasn't been any movement after 8000ms, change mode
-      //back to CLOCK. This is placeholder for now
+      //back to CLOCK.
       if ((runTime - lastBufferTime) > 8000) {
         changeMode();
       }
@@ -225,8 +211,15 @@ void loop() {
         lastBufferTime = runTime;
       }
       break;
-
+    
+    case Modes::ALARM:
+      // ------------------------ ALARM MODE -------------------
+      // todo
+      break;
   }
+  // Finally, auto adjust the brightness
+  setBrightness();
+
 }
 
 
@@ -283,4 +276,14 @@ uint8_t getBrightness() {
   lightLevel = analogRead(0);
   uint8_t brightness = static_cast<int>((lightLevel / 1023.0) * 255.0);
   return brightness;
+}
+
+// Adjust the display brightness
+void setBrightness() {
+  if ((runTime - lastBrightnessTime) > updateBrightness) {
+          brightnessLevel = getBrightness();
+          Display.setContrast(brightnessLevel);  
+          lastBrightnessTime = runTime;
+  }
+
 }
