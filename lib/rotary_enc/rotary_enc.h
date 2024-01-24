@@ -46,9 +46,6 @@ class RotEncoder {
       // Returns the type of event that happened.
       Direction encoderEvent();
 
-      // The last recorded direction the encoder was rotated
-      Direction currentDirection;
-
     private:
       // The pins the encoder is connected to
       uint8_t _clockPin;
@@ -72,5 +69,8 @@ class RotEncoder {
 
       // The debounce delay for the selector
       volatile uint64_t _debounce;
+
+      // The last recorded direction the encoder was rotated
+      Direction _currentDirection;
 };
 #endif

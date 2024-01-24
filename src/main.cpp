@@ -5,6 +5,7 @@
 #include <RTClib.h>
 #include <arduinoFFT.h>
 #include <rotary_enc.h>
+#include <menumaker.h>
 
 // Display Pins
 #define CLK_PIN 8
@@ -56,6 +57,8 @@ Constructor Setup: rotation, clock, data, CS, DC, reset
 */
 U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, CLK_PIN, DATA_PIN, CS_PIN, U8X8_PIN_NONE, RESET_PIN);
 
+Menumaker menumaker(Display);
+
 // Rotary encoder constructor
 RotEncoder Encoder(ENC_CLK, ENC_DT, ENC_SW);
 
@@ -104,6 +107,7 @@ void loop() {
   if (Encoder.selectorPressed()) {
     Serial.println("Button Pressed");
     changeMode();
+    menumaker.begin();
   }
 
   switch (mode) {
@@ -170,11 +174,11 @@ void loop() {
       // Menu mode uses default buffer time
       if ((runTime - lastBufferTime) > updateBuffer) {
         Display.clearBuffer();
+
         Display.setFont(u8g2_font_roentgen_nbp_t_all);
         Display.setCursor(100, 40);
         Display.print("Menu Mode");
 
-        
         
         // Set a new buffer updated time
         Display.sendBuffer();
@@ -228,11 +232,12 @@ void updateEncoder() {
   // Tell the Encoder an interrupt event was detected.
   // Store the type in a variable.
   RotEncoder::Direction eventType = Encoder.encoderEvent();
-
-  // Debug
-  //enum class Test : int {on = 1, off = -1};
-  //Test tester = Test::on;
-  //Serial.print((int)tester);
+  if (eventType == RotEncoder::Direction::CLOCKWISE) {
+    Serial.println("Clockwise");
+  }
+  else if (eventType == RotEncoder::Direction::COUNTERCLOCKWISE) {
+    Serial.println("Counter-Clockwise");
+  }
 }
 
 void changeMode() {

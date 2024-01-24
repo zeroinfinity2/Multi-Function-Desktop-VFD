@@ -60,20 +60,20 @@ RotEncoder::Direction RotEncoder::encoderEvent() {
     readEncoder();
 
     // If the clk state is 1, an event happened
-    // And the previous state is not 1 (only registers one HIGH event)
+    // And the previous state is not 1 (only registers one event)
     if (_clkState != _clkPrevState && _clkState == 1) {
         // Determine the direction of rotation
         // When the states differ, encoder was rotated CCW
         if (_dtState != _clkState) {
-            currentDirection = Direction::COUNTERCLOCKWISE;
-            return Direction::COUNTERCLOCKWISE;
+            _currentDirection = Direction::COUNTERCLOCKWISE;
         }
         // If they are the same, encoder was rotated CW
         else {
-            currentDirection = Direction::CLOCKWISE;
-         return Direction::CLOCKWISE;
+            _currentDirection = Direction::CLOCKWISE;
         }
     }
     // Set the current CLK state to the previous state.
     _clkPrevState = _clkState; 
+
+    return _currentDirection;
 }
