@@ -230,9 +230,9 @@ void updateEncoder() {
   RotEncoder::Direction eventType = Encoder.encoderEvent();
 
   // Debug
-  enum class Test {on, off};
-  Test tester = Test::on;
-  Serial.println(tester);
+  //enum class Test : int {on = 1, off = -1};
+  //Test tester = Test::on;
+  //Serial.print((int)tester);
 }
 
 void changeMode() {
