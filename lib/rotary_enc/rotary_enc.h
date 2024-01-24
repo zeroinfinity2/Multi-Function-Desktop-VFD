@@ -19,13 +19,15 @@ class RotEncoder {
 
       // Rotations of the encoder
       enum class Direction {
-        NEUTRAL = 0,
         CLOCKWISE = 1,
         COUNTERCLOCKWISE = -1
       };
 
       // Constructor for a new encoder
       RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin);
+
+      // Initializes the rotary encoder
+      void begin();
       
       // Gets the current reading on the CLK pin (HIGH or LOW)
       void getCurrentClk(uint8_t _clockPin);
@@ -34,12 +36,6 @@ class RotEncoder {
       // DT is phase shifted from the primary CLK.
       void getDtState(uint8_t _dtPin);
 
-      // Gets the last direction the encoder was rotated
-      Direction getDirection();
-
-      // Sets the direction of rotation of the encoder
-      void setDirection();
-
       // Read the selector's state, return true or false
       bool selectorPressed();
 
@@ -47,16 +43,17 @@ class RotEncoder {
       void readEncoder();
 
       // Called when a change is registered on an interrupt pin
-      void encoderEvent();
+      // Returns the type of event that happened.
+      Direction encoderEvent();
+
+      // The last recorded direction the encoder was rotated
+      Direction currentDirection;
 
     private:
       // The pins the encoder is connected to
       uint8_t _clockPin;
       uint8_t _dtPin;
       uint8_t _switchPin;
-
-      // The direction the encoder has been rotated
-      Direction _currentDirection;
       
       // The instantaneous state of the CLK pin
       volatile uint8_t _clkState;

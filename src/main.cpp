@@ -43,14 +43,6 @@ uint8_t brightnessLevel = 255;
 RTC_DS1307 rtc;
 uint8_t dispHour = 0;
 
-//Rotary encoder
-int counter = 0;
-uint8_t currentStateCLK;
-uint8_t lastStateCLK;
-String currentDir = "";
-uint8_t encButtonState;
-uint64_t lastButtonPress = 0;
-
 // Function Prototypes
 uint8_t getBrightness();
 void setBrightness();
@@ -64,6 +56,8 @@ Constructor Setup: rotation, clock, data, CS, DC, reset
 */
 U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, CLK_PIN, DATA_PIN, CS_PIN, U8X8_PIN_NONE, RESET_PIN);
 
+// Rotary encoder constructor
+RotEncoder Encoder(ENC_CLK, ENC_DT, ENC_SW);
 
 // ----------------------------------------------------------
 void setup() {
@@ -72,17 +66,12 @@ void setup() {
   pinMode(DATA_PIN, OUTPUT);
   pinMode(RESET_PIN, OUTPUT);
   pinMode(LIGHT_PIN, INPUT_PULLUP);
-  pinMode(ENC_CLK, INPUT);
-  pinMode(ENC_DT, INPUT);
-  pinMode(ENC_SW, INPUT);
-
-  digitalWrite(ENC_SW, HIGH);
 
   Serial.begin(9600);
   Display.begin(); // Init the display
   Display.setContrast(brightnessLevel); // x = 0(low) to 255, initialize brightness
 
-  lastStateCLK = digitalRead(ENC_CLK); // initial state of encoder
+  Encoder.begin(); // Init the encoder
 
   // Call updateEncoder when changes are seen on the encoder pins
   // 0, 1 are pins 2, 3 respectively.
@@ -107,15 +96,13 @@ void setup() {
 void loop() {
   // Get the current running time
   runTime = millis();
+  
+  // Record the state of the encoder on each tick
+  Encoder.readEncoder();
 
-  // Set the encoder state
-  encButtonState = digitalRead(ENC_SW);
-
-  // Look for encoder button push, with 500ms debounce
-  //Then, change mode.
-  if ((encButtonState == LOW) && (runTime - lastButtonPress > 500)) {
+  // Changes the mode when the selector is pressed
+  if (Encoder.selectorPressed()) {
     Serial.println("Button Pressed");
-    lastButtonPress = runTime;
     changeMode();
   }
 
@@ -238,31 +225,14 @@ void print2digits(uint8_t number) {
 }
 
 void updateEncoder() {
-  // Manages the rotary encoder
-  // Reade the state of the CLK 
-  currentStateCLK = digitalRead(ENC_CLK);
+  // Tell the Encoder an interrupt event was detected.
+  // Store the type in a variable.
+  RotEncoder::Direction eventType = Encoder.encoderEvent();
 
-  // If states differ, then a pulse happened
-  // React to only 1 state change
-  if (currentStateCLK != lastStateCLK && currentStateCLK == 1) {
-    // If the DT state is different from the CLK state, 
-    // the encoder is rotating CCW, so decrement
-    if (digitalRead(ENC_DT) != currentStateCLK) {
-      counter --;
-      currentDir = "CCW";
-    } else {
-      //Encoder is rotating CW so increment
-      counter ++;
-      currentDir = "CW";
-    }
-
-    Serial.print("Direction: ");
-    Serial.print(currentDir);
-    Serial.print(" | Counter: ");
-    Serial.println(counter);
-  }
-  // Remember the CLK state
-  lastStateCLK = currentStateCLK;
+  // Debug
+  enum class Test {on, off};
+  Test tester = Test::on;
+  Serial.println(tester);
 }
 
 void changeMode() {

@@ -16,18 +16,19 @@ RotEncoder::RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin) {
     _clockPin = clockPin;
     _dtPin = dtPin;
     _switchPin = switchPin;
-    
+}
+
+void RotEncoder::begin() {
     // Set the pin modes on the arduino
     pinMode(_clockPin, INPUT);
     pinMode(_dtPin, INPUT);
     pinMode(_switchPin, INPUT_PULLUP);
-    
+
     // Default values
     _debounce = 500;
     _selectorPrevTime = 0;
     _clkPrevState = 0;
     _selectorState = 1;
-    _currentDirection = Direction::NEUTRAL;
 }
 
 void RotEncoder::readEncoder() {
@@ -54,18 +55,7 @@ bool RotEncoder::selectorPressed() {
     }
 }
 
-RotEncoder::Direction RotEncoder::getDirection() {
-    // When the states differ, encoder was rotated CCW
-    if (_dtState != _clkState) {
-        return Direction::COUNTERCLOCKWISE;
-    }
-    // If they are the same, encoder was rotated CW
-    else {
-        return Direction::CLOCKWISE;
-    }
-}
-
-void RotEncoder::encoderEvent() {
+RotEncoder::Direction RotEncoder::encoderEvent() {
     // Reads current states
     readEncoder();
 
@@ -73,9 +63,17 @@ void RotEncoder::encoderEvent() {
     // And the previous state is not 1 (only registers one HIGH event)
     if (_clkState != _clkPrevState && _clkState == 1) {
         // Determine the direction of rotation
-        _currentDirection = getDirection();
+        // When the states differ, encoder was rotated CCW
+        if (_dtState != _clkState) {
+            currentDirection = Direction::COUNTERCLOCKWISE;
+            return Direction::COUNTERCLOCKWISE;
+        }
+        // If they are the same, encoder was rotated CW
+        else {
+            currentDirection = Direction::CLOCKWISE;
+         return Direction::CLOCKWISE;
+        }
     }
-
     // Set the current CLK state to the previous state.
     _clkPrevState = _clkState; 
 }
