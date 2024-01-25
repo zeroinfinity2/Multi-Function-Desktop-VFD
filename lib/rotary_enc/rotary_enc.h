@@ -39,9 +39,6 @@ class RotEncoder {
       // Read the selector's state, return true or false
       bool selectorPressed();
 
-      // Records the state of the encoder
-      void readEncoder();
-
       // Called when a change is registered on an interrupt pin
       // Returns the type of event that happened.
       uint8_t encoderEvent();

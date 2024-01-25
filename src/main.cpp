@@ -186,9 +186,6 @@ void loop() {
   // Get the current running time
   runTime = millis();
   
-  // Record the state of the encoder on each tick
-  Encoder.readEncoder();
-
   // Changes the mode when the selector is pressed
   if (Encoder.selectorPressed()) {
     changeMode();
