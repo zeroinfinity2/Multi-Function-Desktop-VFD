@@ -19,8 +19,9 @@ class RotEncoder {
 
       // Rotations of the encoder
       enum class Direction {
-        CLOCKWISE = 1,
-        COUNTERCLOCKWISE = -1
+        CLOCKWISE,
+        COUNTERCLOCKWISE,
+        NEUTRAL
       };
 
       // Constructor for a new encoder
@@ -71,6 +72,7 @@ class RotEncoder {
       volatile uint64_t _debounce;
 
       // The last recorded direction the encoder was rotated
-      Direction _currentDirection;
+      volatile Direction _currentDirection;
+
 };
 #endif

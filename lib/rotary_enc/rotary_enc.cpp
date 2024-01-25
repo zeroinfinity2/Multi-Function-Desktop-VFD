@@ -20,8 +20,8 @@ RotEncoder::RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin) {
 
 void RotEncoder::begin() {
     // Set the pin modes on the arduino
-    pinMode(_clockPin, INPUT);
-    pinMode(_dtPin, INPUT);
+    pinMode(_clockPin, INPUT_PULLUP);
+    pinMode(_dtPin, INPUT_PULLUP);
     pinMode(_switchPin, INPUT_PULLUP);
 
     // Default values
@@ -73,7 +73,7 @@ RotEncoder::Direction RotEncoder::encoderEvent() {
         }
     }
     // Set the current CLK state to the previous state.
-    _clkPrevState = _clkState; 
+    _clkPrevState = _clkState;
 
     return _currentDirection;
 }

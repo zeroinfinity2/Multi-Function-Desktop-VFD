@@ -5,7 +5,6 @@
 #include <RTClib.h>
 #include <arduinoFFT.h>
 #include <rotary_enc.h>
-#include <menumaker.h>
 
 // Display Pins
 #define CLK_PIN 8
@@ -23,6 +22,10 @@ enum Modes {
   CLOCK,
   MENU,
   SET_ALARM,
+  SET_CLOCK,
+  SET_DATE,
+  ADJUST_BRIGHTNESS,
+  ADJUST_TEMP,
   ALARM
 };
 // Set the clock mode as the initial mode
@@ -51,16 +54,99 @@ void print2digits(uint8_t number);
 void updateEncoder();
 void changeMode();
 
+const char* mainMenuItems[6] = {
+  "Set Clock",
+  "Set Alarm",
+  "Set Date",
+  "Adjust Brightness",
+  "Adjust Temperature",
+  "Close Menu"
+};
+
+bool menuLoaded = false;
+uint64_t interruptTime = 0;
+
 /* Display Constructor 
 Pins are unique to setup.
 Constructor Setup: rotation, clock, data, CS, DC, reset
 */
 U8G2_GP1294AI_256X48_F_4W_SW_SPI Display(U8G2_R0, CLK_PIN, DATA_PIN, CS_PIN, U8X8_PIN_NONE, RESET_PIN);
 
-Menumaker menumaker(Display);
-
 // Rotary encoder constructor
 RotEncoder Encoder(ENC_CLK, ENC_DT, ENC_SW);
+
+/**************************************************************************/
+/*
+  A reimagined menu maker for the U8g2 library and compatable displays.
+  Created for the 256 x 48 VFD Dot Matrix : GP1294AI.
+  However, it should be compatable with any other displays.
+  Note that it references the display. Construct the display first, before 
+  the Menu Maker object.
+
+*/
+/**************************************************************************/
+class Menumaker {
+  public:
+    // Let's set up the variables for the display.
+    int displayHeight = Display.getDisplayHeight();
+    int displayWidth = Display.getDisplayWidth();
+    int currentSelected;
+    int centerPt = displayWidth / 2;
+    int maxLength;
+
+    // Constructs a new menu.
+    // Required is the maximum number of menu items
+    Menumaker(int maxLength) {
+      this -> maxLength = maxLength;
+      currentSelected = 0;
+    }
+
+    // Resets the menu.
+    void reset() {
+      currentSelected = 0;
+    };
+
+    // Sets the title
+    void setTitle(const char *title) {
+      Display.drawButtonUTF8(centerPt, 8, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 0, title);
+      Display.drawHLine(0, 10, displayWidth);
+    };
+
+    // Builds the Menu items
+    void buildItems(int length, const char* items[]) {
+      Display.clearBuffer();
+      // Draw the elements
+      int ySpacing = 20;
+      for (int i = 0; i < length; i++) {
+        Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[i]);
+        ySpacing += 11;
+      }
+
+      menuHighlighter(currentSelected, items);
+      Display.sendBuffer();
+
+    };
+    // Highlights the currently selected element
+    void menuHighlighter(int menuIndex, const char* items[]) {
+      Display.drawButtonUTF8(centerPt, (menuIndex * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
+    };
+
+    // Moves the index of the current selected item upwards.
+    void scrollUp(const char* items[]) {
+      currentSelected -= 1;
+      currentSelected = max(currentSelected, 0);
+      currentSelected = currentSelected % maxLength;
+    };
+
+    // Moves the index of the currently selected item downwards.
+    void scrollDown(const char* items[]) {
+      currentSelected += 1;
+      currentSelected = currentSelected % maxLength;
+    };
+};
+
+// Main Menu Constructor
+Menumaker MainMenu(6);
 
 // ----------------------------------------------------------
 void setup() {
@@ -105,9 +191,7 @@ void loop() {
 
   // Changes the mode when the selector is pressed
   if (Encoder.selectorPressed()) {
-    Serial.println("Button Pressed");
     changeMode();
-    menumaker.begin();
   }
 
   switch (mode) {
@@ -171,24 +255,18 @@ void loop() {
     
     case Modes::MENU:
       // ------------------------ MENU MODE -------------------
-      // Menu mode uses default buffer time
-      if ((runTime - lastBufferTime) > updateBuffer) {
-        Display.clearBuffer();
-
-        Display.setFont(u8g2_font_roentgen_nbp_t_all);
-        Display.setCursor(100, 40);
-        Display.print("Menu Mode");
-
-        
-        // Set a new buffer updated time
-        Display.sendBuffer();
-        lastBufferTime = runTime;
-      }
+      // Menu doesn't need to be refreshed continuously, but 
+      // only update when a change is conducted.
       
-      // In menu, if there hasn't been any movement after 8000ms, change mode
-      //back to CLOCK.
-      if ((runTime - lastBufferTime) > 8000) {
-        changeMode();
+      if (menuLoaded == false) {
+        
+
+        // Build the menu
+        Display.setFont(u8g2_font_roentgen_nbp_t_all);
+        MainMenu.setTitle("Settings");
+        MainMenu.buildItems(6, mainMenuItems);
+        
+        menuLoaded = true;
       }
       break;
     
@@ -207,6 +285,26 @@ void loop() {
       // ------------------------ ALARM MODE -------------------
       // todo
       break;
+
+    case Modes::SET_CLOCK:
+      // ------------------------ SET CLOCK MODE -------------------
+      // todo
+      break;
+
+    case Modes::SET_DATE:
+      // ------------------------ SET DATE MODE -------------------
+      // todo
+      break;
+    
+    case Modes::ADJUST_BRIGHTNESS:
+      // ------------------------ ADJUST BRIGHTNESS MODE -------------------
+      // todo
+      break;
+    
+    case Modes::ADJUST_TEMP:
+      // ------------------------ ADJUST TEMP MODE -------------------
+      // todo
+      break;    
   }
   // Finally, auto adjust the brightness
   setBrightness();
@@ -228,21 +326,30 @@ void print2digits(uint8_t number) {
   }
 }
 
+// This gets called when an interrupt is detected
 void updateEncoder() {
-  // Tell the Encoder an interrupt event was detected.
-  // Store the type in a variable.
-  RotEncoder::Direction eventType = Encoder.encoderEvent();
-  if (eventType == RotEncoder::Direction::CLOCKWISE) {
-    Serial.println("Clockwise");
-  }
-  else if (eventType == RotEncoder::Direction::COUNTERCLOCKWISE) {
-    Serial.println("Counter-Clockwise");
+  if (millis() - interruptTime > 50) {
+    // If the menu mode is active
+    if (mode == Modes::MENU) {
+      RotEncoder::Direction eventType = Encoder.encoderEvent();
+
+      if (eventType == RotEncoder::Direction::CLOCKWISE) {
+        MainMenu.scrollDown(mainMenuItems);
+      }
+      else if (eventType == RotEncoder::Direction::COUNTERCLOCKWISE) {
+        MainMenu.scrollUp(mainMenuItems);
+      }
+      menuLoaded = false;
+      interruptTime = millis();
+    }
   }
 }
 
 void changeMode() {
   if (mode == Modes::CLOCK) mode = Modes::MENU;
   else if (mode == Modes::MENU) mode = Modes::CLOCK;
+  MainMenu.reset();
+  menuLoaded = false;
   lastBufferTime = 0;
 }
 
