@@ -328,22 +328,20 @@ void print2digits(uint8_t number) {
 
 // This gets called when an interrupt is detected
 void updateEncoder() {
-  if (millis() - interruptTime > 50) {
-    // If the menu mode is active
-    if (mode == Modes::MENU) {
-      RotEncoder::Direction eventType = Encoder.encoderEvent();
+  // If the menu mode is active
+  if (mode == Modes::MENU) {
+    uint8_t eventType = Encoder.encoderEvent();
 
-      if (eventType == RotEncoder::Direction::CLOCKWISE) {
-        MainMenu.scrollDown(mainMenuItems);
-      }
-      else if (eventType == RotEncoder::Direction::COUNTERCLOCKWISE) {
-        MainMenu.scrollUp(mainMenuItems);
-      }
-      menuLoaded = false;
-      interruptTime = millis();
+    if (eventType == CLOCKWISE) {
+      MainMenu.scrollDown(mainMenuItems);
     }
-  }
+    else if (eventType == COUNTERCLOCKWISE) {
+      MainMenu.scrollUp(mainMenuItems);
+    }
+    menuLoaded = false;
+    }
 }
+
 
 void changeMode() {
   if (mode == Modes::CLOCK) mode = Modes::MENU;

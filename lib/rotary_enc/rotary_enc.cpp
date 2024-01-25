@@ -12,6 +12,31 @@
 #include <rotary_enc.h>
 #include <Arduino.h>
 
+#define R_START 0x0
+#define R_CW_FINAL 0x1
+#define R_CW_BEGIN 0x2
+#define R_CW_NEXT 0x3
+#define R_CCW_BEGIN 0x4
+#define R_CCW_FINAL 0x5
+#define R_CCW_NEXT 0x6
+
+const unsigned char ttable[7][4] = {
+  // R_START
+  {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
+  // R_CW_FINAL
+  {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | CLOCKWISE},
+  // R_CW_BEGIN
+  {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
+  // R_CW_NEXT
+  {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
+  // R_CCW_BEGIN
+  {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
+  // R_CCW_FINAL
+  {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | COUNTERCLOCKWISE},
+  // R_CCW_NEXT
+  {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
+};
+
 RotEncoder::RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin) {
     _clockPin = clockPin;
     _dtPin = dtPin;
@@ -25,24 +50,17 @@ void RotEncoder::begin() {
     pinMode(_switchPin, INPUT_PULLUP);
 
     // Default values
-    _debounce = 500;
     _selectorPrevTime = 0;
-    _clkPrevState = 0;
-    _selectorState = 1;
 }
 
-void RotEncoder::readEncoder() {
-    getCurrentClk(_clockPin);
-    getDtState(_dtPin);
-}
-
-void RotEncoder::getCurrentClk(uint8_t clockPin) {
-    _clkState = digitalRead(clockPin);
-}
-
-void RotEncoder::getDtState(uint8_t dtPin) {
-    _dtState = digitalRead(dtPin);
-}
+uint8_t RotEncoder::encoderEvent() {
+    // Grab state of input pins.
+    uint8_t pinstate = (digitalRead(_dtPin) << 1) | digitalRead(_clockPin);
+    // Determine new state from the pins and state table.
+    _encState = ttable[_encState & 0xf][pinstate];
+    // Return emit bits, ie the generated event.
+    return _encState & 0x30;
+};
 
 bool RotEncoder::selectorPressed() {
     _selectorState = digitalRead(_switchPin);
@@ -53,27 +71,4 @@ bool RotEncoder::selectorPressed() {
     else {
         return false;
     }
-}
-
-RotEncoder::Direction RotEncoder::encoderEvent() {
-    // Reads current states
-    readEncoder();
-
-    // If the clk state is 1, an event happened
-    // And the previous state is not 1 (only registers one event)
-    if (_clkState != _clkPrevState && _clkState == 1) {
-        // Determine the direction of rotation
-        // When the states differ, encoder was rotated CCW
-        if (_dtState != _clkState) {
-            _currentDirection = Direction::COUNTERCLOCKWISE;
-        }
-        // If they are the same, encoder was rotated CW
-        else {
-            _currentDirection = Direction::CLOCKWISE;
-        }
-    }
-    // Set the current CLK state to the previous state.
-    _clkPrevState = _clkState;
-
-    return _currentDirection;
 }

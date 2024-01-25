@@ -14,16 +14,15 @@
 
 #include <Arduino.h>
 
+// No complete step yet.
+#define NEUTRAL 0x0
+// Clockwise step.
+#define CLOCKWISE 0x10
+// Anti-clockwise step.
+#define COUNTERCLOCKWISE 0x20
+
 class RotEncoder {
     public:
-
-      // Rotations of the encoder
-      enum class Direction {
-        CLOCKWISE,
-        COUNTERCLOCKWISE,
-        NEUTRAL
-      };
-
       // Constructor for a new encoder
       RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin);
 
@@ -45,7 +44,7 @@ class RotEncoder {
 
       // Called when a change is registered on an interrupt pin
       // Returns the type of event that happened.
-      Direction encoderEvent();
+      uint8_t encoderEvent();
 
     private:
       // The pins the encoder is connected to
@@ -53,14 +52,8 @@ class RotEncoder {
       uint8_t _dtPin;
       uint8_t _switchPin;
       
-      // The instantaneous state of the CLK pin
-      volatile uint8_t _clkState;
-
-      // The instantaneous state of the DT pin
-      volatile uint8_t _dtState;
-
-      // The last reported state of the CLK pin.
-      volatile uint8_t _clkPrevState;
+      // The instantaneous state of the encoder pins
+      volatile uint8_t _encState;
       
       // The state of the selector button
       volatile uint8_t _selectorState;
@@ -70,9 +63,5 @@ class RotEncoder {
 
       // The debounce delay for the selector
       volatile uint64_t _debounce;
-
-      // The last recorded direction the encoder was rotated
-      volatile Direction _currentDirection;
-
 };
 #endif
