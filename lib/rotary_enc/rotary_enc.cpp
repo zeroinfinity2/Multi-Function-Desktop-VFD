@@ -41,6 +41,7 @@ RotEncoder::RotEncoder(uint8_t clockPin, uint8_t dtPin, uint8_t switchPin) {
     _clockPin = clockPin;
     _dtPin = dtPin;
     _switchPin = switchPin;
+    _debounce = 500;
 }
 
 void RotEncoder::begin() {
