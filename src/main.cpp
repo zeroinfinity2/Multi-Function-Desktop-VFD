@@ -21,12 +21,12 @@
 enum Modes {
   CLOCK,
   MENU,
-  SET_ALARM,
+  ALARM,
   SET_CLOCK,
+  SET_ALARM,
   SET_DATE,
   ADJUST_BRIGHTNESS,
-  ADJUST_TEMP,
-  ALARM
+  ADJUST_TEMP
 };
 // Set the clock mode as the initial mode
 Modes mode = Modes::CLOCK;
@@ -114,7 +114,6 @@ class Menumaker {
 
     // Builds the Menu items
     void buildItems(int length, const char* items[]) {
-      Display.clearBuffer();
       // Draw the elements
       int ySpacing = 20;
       for (int i = 0; i < length; i++) {
@@ -123,9 +122,8 @@ class Menumaker {
       }
 
       menuHighlighter(currentSelected, items);
-      Display.sendBuffer();
-
     };
+
     // Highlights the currently selected element
     void menuHighlighter(int menuIndex, const char* items[]) {
       Display.drawButtonUTF8(centerPt, (menuIndex * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
@@ -256,14 +254,13 @@ void loop() {
       // only update when a change is conducted.
       
       if (menuLoaded == false) {
-        
-
+        Display.clearBuffer();
         // Build the menu
         Display.setFont(u8g2_font_roentgen_nbp_t_all);
         MainMenu.setTitle("Settings");
         MainMenu.buildItems(6, mainMenuItems);
-        
         menuLoaded = true;
+        Display.sendBuffer();
       }
       break;
     
@@ -331,9 +328,11 @@ void updateEncoder() {
 
     if (eventType == CLOCKWISE) {
       MainMenu.scrollDown(mainMenuItems);
+      Serial.println(mainMenuItems[MainMenu.currentSelected]);
     }
     else if (eventType == COUNTERCLOCKWISE) {
       MainMenu.scrollUp(mainMenuItems);
+      Serial.println(mainMenuItems[MainMenu.currentSelected]);
     }
     menuLoaded = false;
     }
