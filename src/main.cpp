@@ -87,7 +87,7 @@ RotEncoder Encoder(ENC_CLK, ENC_DT, ENC_SW);
 /**************************************************************************/
 class Menumaker {
   public:
-    // Let's set up the variables for the display.
+    // Sets up the variables for the display.
     int displayHeight = Display.getDisplayHeight();
     int displayWidth = Display.getDisplayWidth();
     int currentSelected;
@@ -96,24 +96,24 @@ class Menumaker {
 
     // Constructs a new menu.
     // Required is the maximum number of menu items
-    Menumaker(int maxLength) {
+    Menumaker::Menumaker(int maxLength) {
       this -> maxLength = maxLength;
       currentSelected = 0;
     }
 
     // Resets the menu.
-    void reset() {
+    void Menumaker::reset() {
       currentSelected = 0;
     };
 
     // Sets the title
-    void setTitle(const char *title) {
+    void Menumaker::setTitle(const char *title) {
       Display.drawButtonUTF8(centerPt, 8, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 0, title);
       Display.drawHLine(0, 10, displayWidth);
     };
 
     // Builds the Menu items
-    void buildItems(int length, const char* items[]) {
+    void Menumaker::buildItems(int length, const char* items[]) {
       // Draw the elements
       int ySpacing = 20;
       for (int i = 0; i < length; i++) {
@@ -125,19 +125,19 @@ class Menumaker {
     };
 
     // Highlights the currently selected element
-    void menuHighlighter(int menuIndex, const char* items[]) {
+    void Menumaker::menuHighlighter(int menuIndex, const char* items[]) {
       Display.drawButtonUTF8(centerPt, (menuIndex * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
     };
 
     // Moves the index of the current selected item upwards.
-    void scrollUp(const char* items[]) {
+    void Menumaker::scrollUp() {
       currentSelected -= 1;
       currentSelected = max(currentSelected, 0);
       currentSelected = currentSelected % maxLength;
     };
 
     // Moves the index of the currently selected item downwards.
-    void scrollDown(const char* items[]) {
+    void Menumaker::scrollDown() {
       currentSelected += 1;
       currentSelected = currentSelected % maxLength;
     };
@@ -327,11 +327,11 @@ void updateEncoder() {
     uint8_t eventType = Encoder.encoderEvent();
 
     if (eventType == CLOCKWISE) {
-      MainMenu.scrollDown(mainMenuItems);
+      MainMenu.scrollDown();
       Serial.println(mainMenuItems[MainMenu.currentSelected]);
     }
     else if (eventType == COUNTERCLOCKWISE) {
-      MainMenu.scrollUp(mainMenuItems);
+      MainMenu.scrollUp();
       Serial.println(mainMenuItems[MainMenu.currentSelected]);
     }
     menuLoaded = false;
