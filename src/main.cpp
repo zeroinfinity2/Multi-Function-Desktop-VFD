@@ -104,7 +104,6 @@ class Menumaker {
       this -> maxLength = maxLength;
       currentSelected = 0;
       itemsPerPage = (displayHeight - 11) / 11;
-      
     }
 
     // Resets the menu.
@@ -263,18 +262,13 @@ void loop() {
     
     case Modes::MENU:
       // ------------------------ MENU MODE -------------------
-      // Menu doesn't need to be refreshed continuously, but 
-      // only update when a change is conducted.
+      Display.clearBuffer();
+      // Build the menu
+      Display.setFont(u8g2_font_roentgen_nbp_t_all);
+      MainMenu.setTitle("Settings");
+      MainMenu.buildItems(6, mainMenuItems);
+      Display.sendBuffer();
       
-      if (menuLoaded == false) {
-        Display.clearBuffer();
-        // Build the menu
-        Display.setFont(u8g2_font_roentgen_nbp_t_all);
-        MainMenu.setTitle("Settings");
-        MainMenu.buildItems(6, mainMenuItems);
-        menuLoaded = true;
-        Display.sendBuffer();
-      }
       break;
     
     case Modes::SET_ALARM:
@@ -347,8 +341,7 @@ void updateEncoder() {
       MainMenu.scrollUp();
       Serial.println(mainMenuItems[MainMenu.currentSelected]);
     }
-    menuLoaded = false;
-    }
+  }
 }
 
 // Handles the logic behind mode changes
