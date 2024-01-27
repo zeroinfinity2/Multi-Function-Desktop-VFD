@@ -93,12 +93,17 @@ class Menumaker {
     int currentSelected;
     int centerPt = displayWidth / 2;
     int maxLength;
+    int itemsPerPage;
+    int pages;
+    int currentPage;
 
     // Constructs a new menu.
     // Required is the maximum number of menu items
     Menumaker::Menumaker(int maxLength) {
       this -> maxLength = maxLength;
       currentSelected = 0;
+      itemsPerPage = (displayHeight - 11) / 11;
+      
     }
 
     // Resets the menu.
@@ -114,9 +119,15 @@ class Menumaker {
 
     // Builds the Menu items
     void Menumaker::buildItems(int length, const char* items[]) {
+      
+      // Determine the page to build
+      int page = currentSelected / itemsPerPage;
+      //pages = _pageExpr + (((_pageExpr) + 1) % (_pageExpr));
+
+
       // Draw the elements
       int ySpacing = 20;
-      for (int i = 0; i < length; i++) {
+      for (int i = 0; i < itemsPerPage; i++) {
         Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[i]);
         ySpacing += 11;
       }
@@ -184,9 +195,9 @@ void loop() {
   // Get the current running time
   runTime = millis();
   
-  // Changes the mode when the selector is pressed
+  // Defines the logic of pressing the selector.
   if (Encoder.selectorPressed()) {
-    changeMode();
+    changeMode(mode);
   }
 
   switch (mode) {
@@ -338,10 +349,42 @@ void updateEncoder() {
     }
 }
 
+// Handles the logic behind mode changes
+void changeMode(Modes currentMode) {
+  // Open the Main menu in Clockmode.
+  if (currentMode == Modes::CLOCK) mode = Modes::MENU;
 
-void changeMode() {
-  if (mode == Modes::CLOCK) mode = Modes::MENU;
-  else if (mode == Modes::MENU) mode = Modes::CLOCK;
+  // Change the mode based on the selected index in
+  // Menu mode.
+  if (currentMode == Modes::MENU) {
+    switch (MainMenu.currentSelected) {
+      case 0:
+        mode = Modes::SET_CLOCK;
+        break;
+
+      case 1:
+        mode = Modes::SET_ALARM;
+        break;
+      
+      case 2:
+        mode = Modes::SET_DATE;
+        break;
+      
+      case 3:
+        mode = Modes::ADJUST_BRIGHTNESS;
+        break;
+      
+      case 4:
+        mode = Modes::ADJUST_TEMP;
+        break;
+      
+      default:
+        mode = Modes::CLOCK;
+        break;
+    }
+    
+  }
+
   MainMenu.reset();
   menuLoaded = false;
   lastBufferTime = 0;
