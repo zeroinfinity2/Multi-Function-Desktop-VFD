@@ -52,7 +52,7 @@ uint8_t getBrightness();
 void setBrightness();
 void print2digits(uint8_t number);
 void updateEncoder();
-void changeMode();
+void changeMode(Modes mode);
 
 const char* mainMenuItems[6] = {
   "Set Clock",
@@ -100,7 +100,7 @@ class Menumaker {
 
     // Constructs a new menu.
     // Required is the maximum number of menu items
-    Menumaker::Menumaker(int maxLength) {
+    Menumaker(int maxLength) {
       this -> maxLength = maxLength;
       currentSelected = 0;
       itemsPerPage = (displayHeight - 11) / 11;
@@ -108,18 +108,18 @@ class Menumaker {
     }
 
     // Resets the menu.
-    void Menumaker::reset() {
+    void reset() {
       currentSelected = 0;
     };
 
     // Sets the title
-    void Menumaker::setTitle(const char *title) {
+    void setTitle(const char *title) {
       Display.drawButtonUTF8(centerPt, 8, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 0, title);
       Display.drawHLine(0, 10, displayWidth);
     };
 
     // Builds the Menu items
-    void Menumaker::buildItems(int length, const char* items[]) {
+    void buildItems(int length, const char* items[]) {
       
       // Determine the page to build
       currentPage = currentSelected / itemsPerPage;
@@ -139,21 +139,20 @@ class Menumaker {
     };
 
     // Highlights the currently selected element
-    void Menumaker::menuHighlighter(int menuIndex, const char* items[]) {
+    void menuHighlighter(int menuIndex, const char* items[]) {
       Display.drawButtonUTF8(centerPt, ((menuIndex % itemsPerPage) * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
     };
 
     // Moves the index of the current selected item upwards.
-    void Menumaker::scrollUp() {
+    void scrollUp() {
       currentSelected -= 1;
       currentSelected = max(currentSelected, 0);
-      currentSelected = currentSelected % itemsPerPage;
     };
 
     // Moves the index of the currently selected item downwards.
-    void Menumaker::scrollDown() {
+    void scrollDown() {
       currentSelected += 1;
-      currentSelected = currentSelected % itemsPerPage;
+      currentSelected = min(currentSelected, maxLength - 1);
     };
 };
 
