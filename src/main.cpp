@@ -63,7 +63,6 @@ const char* mainMenuItems[6] = {
   "Close Menu"
 };
 
-bool menuLoaded = false;
 uint64_t interruptTime = 0;
 
 /* Display Constructor 
@@ -381,7 +380,6 @@ void changeMode(Modes currentMode) {
   }
 
   MainMenu.reset();
-  menuLoaded = false;
   lastBufferTime = 0;
 }
 
