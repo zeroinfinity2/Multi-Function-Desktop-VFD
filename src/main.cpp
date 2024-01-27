@@ -95,6 +95,7 @@ class Menumaker {
     int maxLength;
     int itemsPerPage;
     int pages;
+    int _pageExpr;
     int currentPage;
 
     // Constructs a new menu.
@@ -121,14 +122,16 @@ class Menumaker {
     void Menumaker::buildItems(int length, const char* items[]) {
       
       // Determine the page to build
-      int page = currentSelected / itemsPerPage;
-      //pages = _pageExpr + (((_pageExpr) + 1) % (_pageExpr));
+      currentPage = currentSelected / itemsPerPage;
+      //_pageExpr = maxLength / itemsPerPage;
+      //totalPages = _pageExpr + (((_pageExpr) + 1) % (_pageExpr));
 
 
       // Draw the elements
       int ySpacing = 20;
       for (int i = 0; i < itemsPerPage; i++) {
-        Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[i]);
+        int index = i + (currentPage * itemsPerPage);
+        Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[index]);
         ySpacing += 11;
       }
 
@@ -137,20 +140,20 @@ class Menumaker {
 
     // Highlights the currently selected element
     void Menumaker::menuHighlighter(int menuIndex, const char* items[]) {
-      Display.drawButtonUTF8(centerPt, (menuIndex * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
+      Display.drawButtonUTF8(centerPt, ((menuIndex % itemsPerPage) * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
     };
 
     // Moves the index of the current selected item upwards.
     void Menumaker::scrollUp() {
       currentSelected -= 1;
       currentSelected = max(currentSelected, 0);
-      currentSelected = currentSelected % maxLength;
+      currentSelected = currentSelected % itemsPerPage;
     };
 
     // Moves the index of the currently selected item downwards.
     void Menumaker::scrollDown() {
       currentSelected += 1;
-      currentSelected = currentSelected % maxLength;
+      currentSelected = currentSelected % itemsPerPage;
     };
 };
 
