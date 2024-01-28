@@ -18,16 +18,16 @@
 #define ENC_DT 3
 #define ENC_SW 4
 
-enum Modes {
+enum class Modes {
   CLOCK,
   MENU,
   ALARM,
   SET_CLOCK,
   SET_ALARM,
-  SET_DATE,
   ADJUST_BRIGHTNESS,
   ADJUST_TEMP
 };
+
 // Set the clock mode as the initial mode
 Modes mode = Modes::CLOCK;
 uint16_t lightLevel;
@@ -57,7 +57,6 @@ void changeMode(Modes mode);
 const char* mainMenuItems[6] = {
   "Set Clock",
   "Set Alarm",
-  "Set Date",
   "Adjust Brightness",
   "Adjust Temperature",
   "Close Menu"
@@ -96,13 +95,21 @@ class Menumaker {
     int pages;
     int _pageExpr;
     int currentPage;
+    #define H_MENU 0
+    #define V_MENU 1
 
     // Constructs a new menu.
-    // Required is the maximum number of menu items
-    Menumaker(int maxLength) {
+    // Required is the maximum number of menu items, and horizontal or vertical.
+    Menumaker(int maxLength, int flag) {
       this -> maxLength = maxLength;
       currentSelected = 0;
-      itemsPerPage = (displayHeight - 11) / 11;
+
+      if (flag & V_MENU) {
+        itemsPerPage = (displayHeight - 11) / 11;
+      }
+      else {
+        itemsPerPage = 3;
+      }
     }
 
     // Resets the menu.
@@ -155,7 +162,10 @@ class Menumaker {
 };
 
 // Main Menu Constructor
-Menumaker MainMenu(6);
+Menumaker MainMenu(6, V_MENU);
+
+// Set Clock Constructor
+Menumaker SetClock(7, H_MENU);
 
 // ----------------------------------------------------------
 void setup() {
@@ -288,12 +298,29 @@ void loop() {
 
     case Modes::SET_CLOCK:
       // ------------------------ SET CLOCK MODE -------------------
-      // todo
+      if ((runTime - lastBufferTime) > updateBuffer) {
+        Display.clearBuffer();
+        // sets the clock to 12:12:12 12/12/2012 to test;
+        uint8_t hour = 12;
+        uint8_t minute = 12;
+        uint8_t second = 12;
+        uint16_t year = 2012;
+        uint8_t month = 12;
+        uint8_t day = 12;
+        rtc.adjust(DateTime(year, month, day, hour, minute, second));
+
+        // Adjust hour, minute, AM/PM
+
+        // Adjust month, day, year
+
+
+        Display.sendBuffer();
+        
+        lastBufferTime = runTime;
+        mode = Modes::CLOCK;
+      }
       break;
 
-    case Modes::SET_DATE:
-      // ------------------------ SET DATE MODE -------------------
-      // todo
       break;
     
     case Modes::ADJUST_BRIGHTNESS:
@@ -361,14 +388,10 @@ void changeMode(Modes currentMode) {
         break;
       
       case 2:
-        mode = Modes::SET_DATE;
-        break;
-      
-      case 3:
         mode = Modes::ADJUST_BRIGHTNESS;
         break;
       
-      case 4:
+      case 3:
         mode = Modes::ADJUST_TEMP;
         break;
       
