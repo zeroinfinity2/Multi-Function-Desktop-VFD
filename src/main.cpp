@@ -46,6 +46,8 @@ uint8_t brightnessLevel = 255;
 // RTC Stuff
 RTC_DS1307 rtc;
 uint8_t dispHour = 0;
+uint8_t timeValues[7];
+DateTime now;
 
 // Function Prototypes
 uint8_t getBrightness();
@@ -53,8 +55,9 @@ void setBrightness();
 void print2digits(uint8_t number);
 void updateEncoder();
 void changeMode(Modes mode);
+void cacheDateTime(DateTime time);
 
-const char* mainMenuItems[6] = {
+const char* mainMenuItems[5] = {
   "Set Clock",
   "Set Alarm",
   "Adjust Brightness",
@@ -124,14 +127,12 @@ class Menumaker {
     };
 
     // Builds the Menu items
-    void buildItems(int length, const char* items[]) {
-      
+    // List type = char
+    void buildItems(int length, const char* items[]) {    
       // Determine the page to build
       currentPage = currentSelected / itemsPerPage;
       //_pageExpr = maxLength / itemsPerPage;
       //totalPages = _pageExpr + (((_pageExpr) + 1) % (_pageExpr));
-
-
       // Draw the elements
       int ySpacing = 20;
       for (int i = 0; i < itemsPerPage; i++) {
@@ -139,13 +140,32 @@ class Menumaker {
         Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[index]);
         ySpacing += 11;
       }
-
       menuHighlighter(currentSelected, items);
     };
+
+    // Builds the Menu Items
+    // List type = int
+    void buildItems(int length, uint8_t items[]) {
+      // Determine the horizontal page to build
+      currentPage = currentSelected / itemsPerPage;
+
+      // Draw the elements
+      int xSpacing = 0;
+      for (int i = 0; i< itemsPerPage; i++) {
+        int index = i + (currentPage * itemsPerPage);
+        Display.setCursor(xSpacing, 20);
+        Display.print(items[index]);
+        xSpacing += 20;
+      }
+      menuHighlighter(currentSelected);
+    }
 
     // Highlights the currently selected element
     void menuHighlighter(int menuIndex, const char* items[]) {
       Display.drawButtonUTF8(centerPt, ((menuIndex % itemsPerPage) * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
+    };
+    void menuHighlighter(int menuIndex) {
+      Display.drawFrame(20, (menuIndex % itemsPerPage) * 20, 20, 20);
     };
 
     // Moves the index of the current selected item upwards.
@@ -217,7 +237,8 @@ void loop() {
       if ((runTime - lastBufferTime) > updateBuffer) {
         Display.clearBuffer();
         // Date / Time Display
-        DateTime now = rtc.now();
+        now = rtc.now();
+        cacheDateTime(now);
         dispHour = now.hour();
 
         // 12 Hour Clock. Comment out for 24 hour clock.
@@ -282,13 +303,10 @@ void loop() {
     
     case Modes::SET_ALARM:
       // ------------------------ ALARM SET MODE -------------------
-      // todo
-      if ((runTime - lastBufferTime) > updateBuffer) {
-        Display.clearBuffer();
+      Display.clearBuffer();
+      SetClock.buildItems(6, timeValues);
 
-        Display.sendBuffer();
-        lastBufferTime = runTime;
-      }
+      Display.sendBuffer();
       break;
     
     case Modes::ALARM:
@@ -300,14 +318,8 @@ void loop() {
       // ------------------------ SET CLOCK MODE -------------------
       if ((runTime - lastBufferTime) > updateBuffer) {
         Display.clearBuffer();
-        // sets the clock to 12:12:12 12/12/2012 to test;
-        uint8_t hour = 12;
-        uint8_t minute = 12;
-        uint8_t second = 12;
-        uint16_t year = 2012;
-        uint8_t month = 12;
-        uint8_t day = 12;
-        rtc.adjust(DateTime(year, month, day, hour, minute, second));
+        //rtc.adjust(DateTime(year, month, day, hour, minute, second));
+        
 
         // Adjust hour, minute, AM/PM
 
@@ -335,10 +347,7 @@ void loop() {
   }
   // Finally, auto adjust the brightness
   setBrightness();
-
 }
-
-
 
 // --------------------------------- METHODS -------------------------------------
 
@@ -399,9 +408,7 @@ void changeMode(Modes currentMode) {
         mode = Modes::CLOCK;
         break;
     }
-    
   }
-
   MainMenu.reset();
   lastBufferTime = 0;
 }
@@ -420,5 +427,15 @@ void setBrightness() {
           Display.setContrast(brightnessLevel);  
           lastBrightnessTime = runTime;
   }
+}
 
+// Cache the Date and Time
+void cacheDateTime(DateTime time) {
+  timeValues[0] = time.twelveHour();
+  timeValues[1] = time.minute();
+  timeValues[2] = time.isPM();
+  timeValues[3] = time.month();
+  timeValues[4] = time.day();
+  timeValues[5] = time.year();
+  timeValues[7] = 0; // Exit 
 }
