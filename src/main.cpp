@@ -46,7 +46,6 @@ uint8_t brightnessLevel = 255;
 // RTC Stuff
 RTC_DS1307 rtc;
 uint8_t dispHour = 0;
-uint8_t timeValues[7];
 DateTime now;
 
 // Function Prototypes
@@ -56,6 +55,10 @@ void print2digits(uint8_t number);
 void updateEncoder();
 void changeMode(Modes mode);
 void cacheDateTime(DateTime time);
+void processSetClock();
+void clockModeInterrupt(uint8_t type);
+void setClockInterrupt(uint8_t type);
+uint8_t daysInMonth(uint8_t month);
 
 const char* mainMenuItems[5] = {
   "Set Clock",
@@ -66,6 +69,31 @@ const char* mainMenuItems[5] = {
 };
 
 uint64_t interruptTime = 0;
+bool itemSelected = false;
+
+// Second level selected timeData structure
+struct timeData {
+  // The item knows the state it is in.
+  bool selected = false;
+  // The index of the currently selected item.
+  uint8_t itemIndex = 0;
+  // The value of the currently selected item.
+  uint8_t itemValue = 0;
+  // The minimum integer value of the selected item
+  uint8_t itemsMin = 0;
+  // The maximum value of the selected item
+  uint8_t itemsMax = 0;
+};
+
+// Declare all of the timeData structs
+timeData hour;
+timeData minute;
+timeData timeOfDay;
+timeData month;
+timeData day;
+timeData year;
+
+struct timeData timeValues[6];
 
 /* Display Constructor 
 Pins are unique to setup.
@@ -91,7 +119,7 @@ class Menumaker {
     // Sets up the variables for the display.
     int displayHeight = Display.getDisplayHeight();
     int displayWidth = Display.getDisplayWidth();
-    int currentSelected;
+    int currentHighlighted;
     int centerPt = displayWidth / 2;
     int maxLength;
     int itemsPerPage;
@@ -105,7 +133,7 @@ class Menumaker {
     // Required is the maximum number of menu items, and horizontal or vertical.
     Menumaker(int maxLength, int flag) {
       this -> maxLength = maxLength;
-      currentSelected = 0;
+      currentHighlighted = 0;
 
       if (flag & V_MENU) {
         itemsPerPage = (displayHeight - 11) / 11;
@@ -117,7 +145,7 @@ class Menumaker {
 
     // Resets the menu.
     void reset() {
-      currentSelected = 0;
+      currentHighlighted = 0;
     };
 
     // Sets the title
@@ -130,7 +158,7 @@ class Menumaker {
     // List type = char
     void buildItems(int length, const char* items[]) {    
       // Determine the page to build
-      currentPage = currentSelected / itemsPerPage;
+      currentPage = currentHighlighted / itemsPerPage;
       //_pageExpr = maxLength / itemsPerPage;
       //totalPages = _pageExpr + (((_pageExpr) + 1) % (_pageExpr));
       // Draw the elements
@@ -140,27 +168,27 @@ class Menumaker {
         Display.drawButtonUTF8(centerPt, ySpacing, U8G2_BTN_BW0 | U8G2_BTN_HCENTER, displayWidth, 0, 1, items[index]);
         ySpacing += 11;
       }
-      menuHighlighter(currentSelected, items);
+      menuHighlighter(currentHighlighted, items);
     };
 
     // Builds the Menu Items
-    // List type = int
-    void buildItems(int length, uint8_t items[]) {
+    // List type = timeData Struct
+    void buildItems(int length, timeData items[]) {
       // Determine the horizontal page to build
-      currentPage = currentSelected / itemsPerPage;
+      currentPage = currentHighlighted / itemsPerPage;
 
       // Draw the elements
       int xSpacing = 0;
       for (int i = 0; i< itemsPerPage; i++) {
         int index = i + (currentPage * itemsPerPage);
         Display.setCursor(xSpacing, 20);
-        Display.print(items[index]);
+        Display.print(items[index].itemValue);
         xSpacing += 20;
       }
-      menuHighlighter(currentSelected);
+      menuHighlighter(currentHighlighted);
     }
 
-    // Highlights the currently selected element
+    // Highlights the current element
     void menuHighlighter(int menuIndex, const char* items[]) {
       Display.drawButtonUTF8(centerPt, ((menuIndex % itemsPerPage) * 11) + 20, U8G2_BTN_BW0 | U8G2_BTN_HCENTER | U8G2_BTN_INV, displayWidth, 0, 1, items[menuIndex]);
     };
@@ -168,16 +196,16 @@ class Menumaker {
       Display.drawFrame(20, (menuIndex % itemsPerPage) * 20, 20, 20);
     };
 
-    // Moves the index of the current selected item upwards.
+    // Moves the index of the current highlighted item upwards.
     void scrollUp() {
-      currentSelected -= 1;
-      currentSelected = max(currentSelected, 0);
+      currentHighlighted -= 1;
+      currentHighlighted = max(currentHighlighted, 0);
     };
 
-    // Moves the index of the currently selected item downwards.
+    // Moves the index of the currently highlighted item downwards.
     void scrollDown() {
-      currentSelected += 1;
-      currentSelected = min(currentSelected, maxLength - 1);
+      currentHighlighted += 1;
+      currentHighlighted = min(currentHighlighted, maxLength - 1);
     };
 };
 
@@ -218,20 +246,61 @@ void setup() {
     // following line sets the RTC to the date & time this sketch was compiled
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
+
+  // Setup the timeData structs
+  // Hours
+  hour.itemIndex = 0;
+  hour.itemsMax = 12;
+  hour.itemsMin = 1;
+  hour.itemValue = 12;
+  timeValues[0] = hour;
+
+  // Minutes
+  minute.itemIndex = 1;
+  minute.itemsMax = 59;
+  minute.itemsMin = 0;
+  minute.itemValue = 0;
+  timeValues[1] = minute;
+
+  // Time of Day
+  timeOfDay.itemIndex = 2;
+  timeOfDay.itemsMax = 1;
+  timeOfDay.itemsMin = 0;
+  timeOfDay.itemValue = 0;
+  timeValues[2] = timeOfDay;
+
+  // Month
+  month.itemIndex = 3;
+  month.itemsMax = 12;
+  month.itemsMin = 1;
+  month.itemValue = 1;
+  timeValues[3] = month;
+
+  // Day
+  day.itemIndex = 4;
+  day.itemsMax = 31;
+  day.itemsMin = 1;
+  day.itemValue = 1;
+  timeValues[4] = day;
+
+  // Year
+  year.itemIndex = 5;
+  year.itemsMax = 2099;
+  year.itemsMin = 2000;
+  year.itemValue = 2024;
+  timeValues[6] = year;
 }
 
 // ----------------------------------------------------------
 void loop() {
   // Get the current running time
   runTime = millis();
-  
-  // Defines the logic of pressing the selector.
-  if (Encoder.selectorPressed()) {
-    changeMode(mode);
-  }
 
   switch (mode) {
     case Modes::CLOCK:
+      // Encoder button listener
+      if (Encoder.selectorPressed()) changeMode(mode);
+    
       // ------------------------ CLOCK MODE -------------------
       // Clock mode's buffer time is 1000ms.
       if ((runTime - lastBufferTime) > updateBuffer) {
@@ -291,6 +360,9 @@ void loop() {
       // END of CLOCK MODE
     
     case Modes::MENU:
+      // Encoder button listener
+      if (Encoder.selectorPressed()) changeMode(mode);
+
       // ------------------------ MENU MODE -------------------
       Display.clearBuffer();
       // Build the menu
@@ -316,10 +388,25 @@ void loop() {
 
     case Modes::SET_CLOCK:
       // ------------------------ SET CLOCK MODE -------------------
+      // The encoder button is context aware in the set clock mode
+      if (Encoder.selectorPressed()) {
+        // This is the switch to determine if an item is selected or not.
+        itemSelected = !itemSelected;
+
+        if (itemSelected) {
+          // Sets the current item selected to the currently highlighted item.
+          
+
+        }
+      }
       if ((runTime - lastBufferTime) > updateBuffer) {
         Display.clearBuffer();
+        // If an item in this mode is not selected, the 
+
         //rtc.adjust(DateTime(year, month, day, hour, minute, second));
-        
+        // Processes the input by allowing user to adjust the values
+        // of each contained value, based on index.
+        // 0: 12 hour, 1: minutes, 2: Am/Pm, 3: Month, 4: day, 5: year, 6: quit
 
         // Adjust hour, minute, AM/PM
 
@@ -329,10 +416,7 @@ void loop() {
         Display.sendBuffer();
         
         lastBufferTime = runTime;
-        mode = Modes::CLOCK;
       }
-      break;
-
       break;
     
     case Modes::ADJUST_BRIGHTNESS:
@@ -364,18 +448,15 @@ void print2digits(uint8_t number) {
 
 // This gets called when an interrupt is detected
 void updateEncoder() {
-  // If the menu mode is active
-  if (mode == Modes::MENU) {
-    uint8_t eventType = Encoder.encoderEvent();
+  // Gets the event type.
+  uint8_t eventType = Encoder.encoderEvent();
 
-    if (eventType == CLOCKWISE) {
-      MainMenu.scrollDown();
-      Serial.println(mainMenuItems[MainMenu.currentSelected]);
-    }
-    else if (eventType == COUNTERCLOCKWISE) {
-      MainMenu.scrollUp();
-      Serial.println(mainMenuItems[MainMenu.currentSelected]);
-    }
+  // Context sensitive interrupt
+  if (mode == Modes::MENU) {
+    clockModeInterrupt(eventType);
+  }
+  else if (mode == Modes::SET_CLOCK) {
+    setClockInterrupt(eventType);
   }
 }
 
@@ -387,7 +468,7 @@ void changeMode(Modes currentMode) {
   // Change the mode based on the selected index in
   // Menu mode.
   if (currentMode == Modes::MENU) {
-    switch (MainMenu.currentSelected) {
+    switch (MainMenu.currentHighlighted) {
       case 0:
         mode = Modes::SET_CLOCK;
         break;
@@ -431,11 +512,54 @@ void setBrightness() {
 
 // Cache the Date and Time
 void cacheDateTime(DateTime time) {
-  timeValues[0] = time.twelveHour();
-  timeValues[1] = time.minute();
-  timeValues[2] = time.isPM();
-  timeValues[3] = time.month();
-  timeValues[4] = time.day();
-  timeValues[5] = time.year();
-  timeValues[7] = 0; // Exit 
+  // Update the structs.
+  hour.itemValue = time.twelveHour();
+  minute.itemValue = time.minute();
+  timeOfDay.itemValue = time.isPM();
+  month.itemValue = time.month();
+  day.itemValue = time.day();
+  year.itemValue = time.year();
+
+}
+
+// Processes the Set Clock selections
+void processSetClock() {
+}
+
+// Mode interrupts
+// These are called when the encoder is rotated in each associated mode
+
+void clockModeInterrupt(uint8_t eventType) {
+  if (eventType == CLOCKWISE) {
+    MainMenu.scrollDown();
+    Serial.println(mainMenuItems[MainMenu.currentHighlighted]);
+  }
+  else if (eventType == COUNTERCLOCKWISE) {
+    MainMenu.scrollUp();
+    Serial.println(mainMenuItems[MainMenu.currentHighlighted]);
+  }
+}
+void setClockInterrupt(uint8_t eventType) {
+  // If an item is selected, then the menu
+  // is on a secondary level.
+  // Increment or decrement the selected item's value.
+  // If not, then resume normal item scrolling.
+  if (eventType == CLOCKWISE) {
+    if (itemSelected) {
+      //increment
+    }
+    else SetClock.scrollDown();
+  }
+  else if (eventType == COUNTERCLOCKWISE) {
+    if (itemSelected) {
+      // decrement
+    }
+    else SetClock.scrollUp();
+  }
+}
+
+// This function determines the number of days in the month
+uint8_t daysInMonth(uint8_t month) {
+  uint8_t days = 28 + (month + (month / 8)) % 2 + (2 % month + (2 * (1 / month)));
+  return days;
 }
